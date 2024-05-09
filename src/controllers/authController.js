@@ -20,29 +20,31 @@ const registerUser = async (req, res) => {
 			});
 		}
 
-		const salt = await bcrypt.genSalt(10);
-		const hashedPassword = await bcrypt.hash(password, salt);
-
 		const user = await User.create({
 			username,
 			email,
-			password: hashedPassword,
+			password,
 		});
 
-		const token = jwt.sign({ id: user._id, email }, process.env.SECRET, {
+		const token = jwt.sign({ _id: user._id, email }, process.env.SECRET, {
 			expiresIn: "2h",
 		});
 
 		user.token = token;
 
-		return res.status(201).json({
-			id: user._id,
-			username,
-			email,
+		const options = {
+			expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+			httpOnly: true,
+		};
+		return res.status(201).cookie("token", token, options).json({
+			user,
 			token,
 		});
 	} catch (error) {
-		console.log(error);
+		res.status(500).json({
+			success: false,
+			message: error.message,
+		});
 	}
 };
 
@@ -55,17 +57,17 @@ const loginUser = async (req, res) => {
 				message: "All fields is required!!",
 			});
 		}
-		const user = await User.findOne({ email });
+		const user = await User.findOne({ email }).select("+password");
 		if (!user) {
 			res.status(404).json({
 				message: "Wrong credentials...",
 			});
 		}
 
-		const matchedPassword = await bcrypt.compare(password, user.password);
+		const matchedPassword = await user.matchPassword(password);
 		if (matchedPassword) {
 			const token = jwt.sign(
-				{ id: user._id, email },
+				{ _id: user._id, email },
 				process.env.SECRET,
 				{
 					expiresIn: "2h",
@@ -80,21 +82,21 @@ const loginUser = async (req, res) => {
 			};
 			return res.status(200).cookie("token", token, options).json({
 				success: true,
-				id: user._id,
-				email,
+				user,
 				token,
 			});
-		}
-		else {
+		} else {
 			res.status(400).json({
 				success: false,
-				message: "Email & Password is invalid"
-			})
+				message: "Email & Password is invalid",
+			});
 		}
 	} catch (error) {
-		console.log(error);
+		res.status(500).json({
+			success: false,
+			message: error.message,
+		});
 	}
 };
-
 
 export { registerUser, loginUser };

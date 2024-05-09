@@ -52,7 +52,7 @@ const resetPassword = async (req, res) => {
 			});
 		}
 
-		user.password = await bcrypt.hash(password, 10);
+		user.password = password;
 
 		user.resetPasswordToken = undefined;
 		user.resetPasswordExpire = undefined;
