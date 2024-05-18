@@ -1,18 +1,27 @@
 import User from "../models/user.model.js";
 import Post from "../models/post.model.js";
 import getDataUri from "../utils/dataUri.js";
-import cloudinary from 'cloudinary'
+import cloudinary from "cloudinary";
+import { decrypt, encrypt } from "../utils/encryptData.js";
+
 const createPost = async (req, res) => {
 	try {
 		const file = req.file;
 		// console.log(file)
 		const fileUri = getDataUri(file);
-		const myCloud = await cloudinary.v2.uploader.upload(fileUri.content)
+		const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
+		const { ivs, encryptedData } = encrypt(
+			req.body.caption,
+			myCloud.secure_url
+		);
+
 		const newPostData = {
-			caption: req.body.caption,
+			encryptedCaption: encryptedData.encryptedCaption,
+			ivCaption: ivs.ivCaption,
 			image: {
-				imageId: myCloud.public_id,
-				url: myCloud.secure_url,
+				public_id: myCloud.public_id,
+				encryptedImgUrl: encryptedData.encryptedImgUrl,
+				ivImgUrl: ivs.ivImgUrl,
 			},
 			owner: req.user._id,
 		};
@@ -33,6 +42,43 @@ const createPost = async (req, res) => {
 		res.status(500).json({
 			success: false,
 			message: error.message,
+		});
+	}
+};
+
+const getAllPost = async (req, res) => {
+	try {
+		const userId = req.user._id;
+		const posts = await Post.find({ owner: userId });
+
+		const decryptPostData = (post) => {
+			const decryptedData = decrypt(
+			  {
+				encryptedCaption: post.encryptedCaption,
+				encryptedImgUrl: post.image.encryptedImgUrl,
+			  },
+			  {
+				ivCaption: post.ivCaption,
+				ivImgUrl: post.image.ivImgUrl,
+			  }
+			);
+			return {
+				encryptedCaption: decryptedData.decryptedCaption,
+				encryptedImgUrl: decryptedData.decryptedImgUrl,
+			};
+		  };
+
+		const decryptedPosts = posts.map(decryptPostData);
+
+		res.status(200).json({
+			success: true,
+			decryptedPosts,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: error.message,
+			stack: error.stack,
 		});
 	}
 };
@@ -96,7 +142,7 @@ const updatePost = async (req, res) => {
 			});
 		}
 
-		post.caption = req.body.caption;
+		post.encryptedCaption = req.body.caption;
 		await post.save();
 		res.status(201).json({
 			success: true,
@@ -253,4 +299,5 @@ export {
 	updatePost,
 	addCommentAndUpdate,
 	deleteComment,
+	getAllPost,
 };

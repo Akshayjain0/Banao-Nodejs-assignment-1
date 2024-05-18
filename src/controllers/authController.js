@@ -98,5 +98,10 @@ const loginUser = async (req, res) => {
 		});
 	}
 };
+const logout = (req, res) => {
+	res.clearCookie("token")
+		.status(200)
+		.json({ success: true, message: "Logged Out!!!" });
+};
 
-export { registerUser, loginUser };
+export { registerUser, loginUser, logout };

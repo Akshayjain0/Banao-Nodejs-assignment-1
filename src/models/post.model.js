@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
 const postSchema = new mongoose.Schema({
-	caption: String,
+	encryptedCaption: String,
+	ivCaption: String,
 	image: {
 		public_id: String,
-		url: String,
+		encryptedImgUrl: String,
+		ivImgUrl: String,
 	},
 	owner: {
 		type: mongoose.Schema.Types.ObjectId,
@@ -34,4 +36,4 @@ const postSchema = new mongoose.Schema({
 });
 
 const Post = mongoose.model("Post", postSchema);
-export default Post
+export default Post;

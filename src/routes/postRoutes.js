@@ -4,6 +4,7 @@ import {
 	createPost,
 	deleteComment,
 	deletePost,
+	getAllPost,
 	likeAndDislikePost,
 	updatePost,
 } from "../controllers/postController.js";
@@ -25,5 +26,8 @@ postRouter
 	.route("/post/comment/:id")
 	.put(isAuthenticated, addCommentAndUpdate)
 	.delete(isAuthenticated, deleteComment);
+
+postRouter.get('/posts',isAuthenticated, getAllPost)
+
 
 export { postRouter };
